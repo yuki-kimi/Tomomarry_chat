@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>chatApp</title>
+  <link rel="stylesheet" href="css/chat.css">
+  <style>
+    #output li {
+      background: #ccc;
+    }
+  </style>
+
+  
+</head>
+
+<body>
+
+    <header>
+    <nav>
+      <ul>
+        <li><img src="img/サーチアイコン.png" alt="さがす"/></li>
+        <li><img src="img/いいねアイコン.png" alt="いいね"/></li>
+        <li><img src="img/コメントアイコン7.png" alt="コメント"/></li>
+        <li><img src="img/履歴書アイコン6.png" alt="プロフィール"></li>
+      </ul>
+    </nav>
+   </header>
+
+  <!--相手の顔写真と名前を表示-->
+  <div class="firend_profile">
+    <img src="img/女性.png" alt="" class="profile_img">
+    <p>あい</p>
+  </div>
+
+  <!--タイムライン部分-->
+  <div class="messages">
+
+  <!-- データ出力場所 -->
+  <ul id="output"></ul>
+
+  <div class="scroll_bar"></div>
+
+  <!-- 入力場所を作成しよう -->
+  <form>
+    <div class="form-container">
+      <div>
+        <input type="text" id="name" class="name_form" placeholder="名前">
+      </div>
+      <!--テキストエリアを使用して、改行ごとに行が増えるようにする-->
+      <div>
+        <textarea id="textarea"  rows="2" placeholder="メッセージを入力"></textarea>
+      </div>
+      <div>
+        <button type="button" id="send">
+          <img src="img/紙飛行機アイコン.png" alt="send" style="width: 35px;height: 35px;">
+        </button>
+      </div>
+    </div>
+  </form>
+
+  
+
+  </div>
+ 
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script>
+    // 日時をいい感じの形式にする関数
+    function convertTimestampToDatetime(timestamp) {
+      const _d = timestamp ? new Date(timestamp.seconds * 1000) : new Date();
+      const m = (_d.getMonth() + 1).toString().padStart(2, '0');
+      const d = _d.getDate().toString().padStart(2, '0');
+      const H = _d.getHours().toString().padStart(2, '0');
+      const i = _d.getMinutes().toString().padStart(2, '0');
+      return `${m}/${d} ${H}:${i}`;
+    }
+  </script>
+  <!-- 以下にfirebaseのコードを貼り付けよう -->
+
+  <script type="module">
+    // Import the functions you need from the SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import {
+   getFirestore,
+   collection,
+   addDoc,
+   serverTimestamp,
+   query,
+   orderBy,
+   onSnapshot,
+  } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    // TODO: Add SDKs for Firebase products that you want to use
+    // https://firebase.google.com/docs/web/setup#available-libraries
+  
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      authDomain: "tomomarry-chat.firebaseapp.com",
+      projectId: "tomomarry-chat",
+      storageBucket: "tomomarry-chat.firebasestorage.app",
+      messagingSenderId: "624206410989",
+      appId: "1:624206410989:web:3051a950068f3e9852c8e4"
+    };
+  
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 「Firestore 形式のデータ」を入力して「配列形式のデータ」を出力する関数を追加する
+function chatDocuments(fireStoreDocs) {
+  const documents = [];
+  fireStoreDocs.forEach(function (doc) {
+    const document = {
+      id: doc.id,
+      data: doc.data(),
+    };
+    documents.push(document);
+  });
+  return documents;
+}
+
+// 「配列形式にしたチャットのデータ」を入力して「表示用のタグにいれて」出力する関数を追加する
+function chatElements(chatDocuments) {
+  const elements = [];
+  chatDocuments.forEach(function (document) {
+    const timeFormatted = convertTimestampToDatetime(document.data.time);
+
+    
+//名前・メッセージ・タイムスタンプを表示
+elements.push(`
+  <div class="message_item" id=${document.id}">
+   <div class="message_name">
+    <p>${document.data.name}</p>
+    <span class="message_time"> ${timeFormatted}</span>
+   </div>
+   <div class="message_text">
+    <p>${document.data.text}</p>
+  </div>
+  `);
+  });
+  return elements;
+}
+
+ //データを取得
+    $("#send").on("click",function(){
+      const data = {
+        name: $("#name").val(),
+        text: $("#textarea").val(),
+        time: serverTimestamp(),
+      };
+      addDoc(collection(db,"chat"),data);
+      $("#textarea").val("");
+    });
+
+   
+    //データ取得条件の指定（新しい順に並び替えて取得）
+    const q = query(collection(db, "chat"), orderBy("time", "asc"));
+
+    onSnapshot(q, (querySnapshot) =>{
+      const documents = chatDocuments(querySnapshot.docs);
+      const elements = chatElements(documents);
+      $("#output").html(elements);
+    });
+
+  </script>
+
+</body>
+
+</html>
